@@ -76,7 +76,14 @@ sudo apt-get update -y
 sudo apt-get install -y jq
 
 # Retrieve the local IP address of the eth0 interface and set it for kubelet
-local_ip="$(ip --json addr show eth1 | jq -r '.[0].addr_info[] | select(.family == "inet") | .local')"
+# Retrieve the local IP address dynamically
+local_ip="$(ip --json addr show | jq -r '.[] | .addr_info[] | select(.family == "inet" and .local != "127.0.0.1") | .local' | head -n1)"
+
+# Check if local_ip is empty (failsafe)
+if [[ -z "$local_ip" ]]; then
+    echo "Error: Could not determine local IP address."
+    exit 1
+fi
 
 # Write the local IP address to the kubelet default configuration file
 cat > /etc/default/kubelet << EOF
